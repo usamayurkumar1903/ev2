@@ -18,6 +18,7 @@ import { ToastProvider }         from './hooks/useToast';
 import App                       from './App';
 import AuthScreen                from './components/AuthScreen';
 import MigrationModal            from './components/MigrationModal';
+import SplashScreen              from './components/SplashScreen';
 import { isSupabaseConfigured }  from './utils/supabase';
 import { migrateLocalData }      from './utils/dataService';
 
@@ -42,6 +43,19 @@ function getLocalData() {
 function AppGate() {
   var { user, loading } = useAuth();
   var skipAuth = localStorage.getItem('et-skip-auth') === '1';
+
+  // Auth state (from localStorage/session cache) can resolve in a few ms,
+  // which means the splash would flash and disappear before it's ever
+  // actually seen. Force it to stay up for a minimum stretch so it reads
+  // as an intentional loading screen rather than a flicker.
+  var MIN_SPLASH_MS = 3000;
+  var minSplashDoneS = useState(false);
+  var minSplashDone = minSplashDoneS[0]; var setMinSplashDone = minSplashDoneS[1];
+  useEffect(function () {
+    var t = setTimeout(function () { setMinSplashDone(true); }, MIN_SPLASH_MS);
+    return function () { clearTimeout(t); };
+  }, []);
+  var showSplash = loading || !minSplashDone;
 
   // Migration modal (manual, when there's lots of local data)
   var showMigrationS = useState(false);
@@ -94,14 +108,9 @@ function AppGate() {
     setLocalData(null);
   }
 
-  // Loading spinner
-  if (loading) {
-    return (
-      <div style={{ position:'fixed', inset:0, background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ width:32, height:32, border:'3px solid var(--border)', borderTopColor:'var(--accent)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
-        <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
-      </div>
-    );
+  // Loading / splash screen while auth state resolves
+  if (showSplash) {
+    return <SplashScreen />;
   }
 
   // Auth gate

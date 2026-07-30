@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Moon, Sun, Download, Trash2, Info, Check,
   ChevronRight, Search, BookOpen, Database, X,
@@ -22,35 +22,40 @@ import { getQueue } from '../utils/offlineQueue';
 
 function Section({ title, children }) {
   return (
-    <div className="settings-section">
-      {title && <div className="settings-section-title">{title}</div>}
-      <div className="card" style={{ overflow: 'hidden' }}>{children}</div>
+    <div className="set2-section">
+      {title && (
+        <div className="set2-section-hd">
+          <span className="set2-section-bar" />
+          <span className="set2-section-title">{title}</span>
+        </div>
+      )}
+      <div className="set2-card">{children}</div>
     </div>
   );
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: 'var(--border)', margin: '0 14px' }} />;
+  return <div className="set2-divider" />;
 }
 
 function Row({ icon, iconBg, iconColor, label, sub, right, onClick, danger }) {
   var Tag = onClick ? 'button' : 'div';
   return (
-    <Tag className="setting-row" onClick={onClick}>
-      <div className="setting-row-icon" style={{ background: iconBg || 'var(--bg-input)' }}>
+    <Tag className="set2-row" onClick={onClick}>
+      <div className="set2-row-tile" style={{ background: iconBg || 'var(--bg-input)' }}>
         <span style={{ color: iconColor || (danger ? 'var(--danger)' : 'var(--text-2)'), display: 'flex' }}>
           {icon}
         </span>
       </div>
-      <div className="setting-row-body">
-        <div className="setting-row-label" style={{ color: danger ? 'var(--danger)' : undefined }}>
+      <div className="set2-row-body">
+        <div className="set2-row-label" style={{ color: danger ? 'var(--danger)' : undefined }}>
           {label}
         </div>
-        {sub && <div className="setting-row-sub">{sub}</div>}
+        {sub && <div className="set2-row-sub">{sub}</div>}
       </div>
       {right !== undefined
         ? right
-        : (onClick && <ChevronRight size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />)}
+        : (onClick && <div className="set2-row-chev"><ChevronRight size={14} /></div>)}
     </Tag>
   );
 }
@@ -133,7 +138,7 @@ function buildPDF(txList, allBooks, currency, title, groupByBook) {
 
   function buildCards(txs) {
     var sorted = txs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-    if (!sorted.length) return '<div style="padding:1rem;text-align:center;color:#bbb;font-size:0.8rem;">No transactions</div>';
+    if (!sorted.length) return '<div style="padding:1rem;text-align:center;color:#bbb;font-size:0.8rem;">No transactions found in the given date range</div>';
     return '<div class="tx-list">' + sorted.map(function(t) {
       var cat  = getCat(t.category);
       var bk   = bookMap[t.bookId];
@@ -321,7 +326,7 @@ function ExportWizard({ open, onClose, books, transactions, currency }) {
     var txPool     = transactions.filter(function(t) { return bookIds.indexOf(t.bookId) !== -1; });
     var txFiltered = filterByDateRange(txPool, from, to);
 
-    if (txFiltered.length === 0) { toast('No transactions in this range', 'error'); return; }
+    if (txFiltered.length === 0) { toast('No transactions found in the given date range', 'error'); return; }
 
     var title = scope === 'all'
       ? 'Full Expense Report' + (from || to ? ' (filtered)' : '')
@@ -770,7 +775,12 @@ export default function Settings() {
   var authCtx      = useAuth();
   var user         = authCtx ? authCtx.user : null;
   var signOut      = authCtx ? authCtx.signOut : null;
-  var queueLen     = getQueue().length;
+  var queueLenS    = useState(function () { return getQueue().length; });
+  var queueLen     = queueLenS[0]; var setQueueLen = queueLenS[1];
+  useEffect(function () {
+    var t = setInterval(function () { setQueueLen(getQueue().length); }, 2000);
+    return function () { clearInterval(t); };
+  }, []);
 
   var clearConfirmS   = useState(false);
   var clearConfirm    = clearConfirmS[0]; var setClearConfirm    = clearConfirmS[1];
@@ -815,6 +825,19 @@ export default function Settings() {
     <div className="page">
       <div className="page-header">
         <span className="page-title">Settings</span>
+      </div>
+
+      <div className="set2-profile-card">
+        <div className="set2-profile-avatar">
+          <User size={22} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="set2-profile-name">{user ? (user.email || 'Account').split('@')[0] : 'Guest'}</div>
+          <div className="set2-profile-sub">{user ? user.email : 'Not signed in · local data only'}</div>
+        </div>
+        <div className={'set2-profile-badge' + (user ? ' synced' : '')}>
+          {user ? 'Synced' : 'Local'}
+        </div>
       </div>
 
       {/* Appearance */}

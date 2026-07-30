@@ -11,9 +11,52 @@
     <meta name="description" content="Premium expense tracking with multi-book support" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Expense Tracker</title>
+    <style>
+      /* Instant splash — shown before the app bundle boots, replaced automatically
+         once React mounts into #root. Matches SplashScreen.jsx visually. */
+      #et-boot-splash {
+        position: fixed; inset: 0; background: #08080E;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+        z-index: 9999;
+      }
+      #et-boot-splash .et-logo {
+        width: 68px; height: 68px; border-radius: 20px;
+        background: linear-gradient(135deg,#7C3AED 0%,#4F46E5 100%);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 28px rgba(124,58,237,0.28);
+        animation: et-pop 420ms cubic-bezier(0.34,1.26,0.64,1) both;
+      }
+      #et-boot-splash .et-logo svg { width: 30px; height: 30px; }
+      #et-boot-splash .et-title {
+        font-family: -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",sans-serif;
+        font-size: 17px; font-weight: 800; letter-spacing: -0.2px; color: #F0EEFF;
+        opacity: 0; animation: et-fade-up 380ms ease 120ms both;
+      }
+      #et-boot-splash .et-ring { width: 26px; height: 26px; position: relative; opacity: 0; animation: et-fade-up 380ms ease 220ms both; }
+      #et-boot-splash .et-ring span {
+        position: absolute; inset: 0; border-radius: 50%;
+        border: 2.5px solid rgba(255,255,255,0.10); border-top-color: #7C3AED;
+        animation: et-spin 0.8s linear infinite; display: block;
+      }
+      @keyframes et-pop { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+      @keyframes et-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes et-spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="et-boot-splash">
+        <div class="et-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+          </svg>
+        </div>
+        <div class="et-title">Expenses</div>
+        <div class="et-ring"><span></span></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

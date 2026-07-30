@@ -8,28 +8,56 @@ import {
   upsertProfile,
   fetchBooks, fetchTransactions, fetchProfile,
   migrateLocalData,
+  dbBookToLocal, dbTxToLocal,
 } from '../utils/dataService';
+import { supabase } from '../utils/supabase';
+import { repairLegacyQueueIds } from '../utils/offlineQueue';
 
 var KEY = 'et-v2';
 
+// Fixed, valid UUIDs for the two seed books (must be real UUIDs — Supabase's
+// books.id / transactions.book_id columns are `uuid`, so a plain string like
+// 'personal' is rejected by Postgres and silently breaks cloud sync forever).
+var PERSONAL_BOOK_ID = 'a1a10000-0000-4000-8000-000000000001';
+var BUSINESS_BOOK_ID = 'b2b20000-0000-4000-8000-000000000002';
+
 var DEFAULTS = {
   books: [
-    { id: 'personal', name: 'Personal', color: '#0A84FF', iconId: 'user',      createdAt: new Date().toISOString() },
-    { id: 'business', name: 'Business', color: '#30D158', iconId: 'briefcase', createdAt: new Date().toISOString() },
+    { id: PERSONAL_BOOK_ID, name: 'Personal', color: '#0A84FF', iconId: 'user',      createdAt: new Date().toISOString() },
+    { id: BUSINESS_BOOK_ID, name: 'Business', color: '#30D158', iconId: 'briefcase', createdAt: new Date().toISOString() },
   ],
   transactions: [],
-  activeBookId: 'personal',
+  activeBookId: PERSONAL_BOOK_ID,
   settings: { currency: '₹', theme: 'dark' },
 };
+
+// One-time remap for anyone whose localStorage still has the old
+// non-UUID 'personal' / 'business' ids from before this fix.
+var LEGACY_ID_MAP = { personal: PERSONAL_BOOK_ID, business: BUSINESS_BOOK_ID };
+function remapLegacyIds(state) {
+  var changed = false;
+  var books = state.books.map(function (b) {
+    if (LEGACY_ID_MAP[b.id]) { changed = true; return Object.assign({}, b, { id: LEGACY_ID_MAP[b.id] }); }
+    return b;
+  });
+  var transactions = state.transactions.map(function (t) {
+    if (LEGACY_ID_MAP[t.bookId]) { changed = true; return Object.assign({}, t, { bookId: LEGACY_ID_MAP[t.bookId] }); }
+    return t;
+  });
+  var activeBookId = LEGACY_ID_MAP[state.activeBookId] || state.activeBookId;
+  if (LEGACY_ID_MAP[state.activeBookId]) changed = true;
+  return changed ? Object.assign({}, state, { books, transactions, activeBookId }) : state;
+}
 
 function load() {
   try {
     var s = localStorage.getItem(KEY);
+    repairLegacyQueueIds(LEGACY_ID_MAP);
     if (!s) return DEFAULTS;
     var parsed = JSON.parse(s);
     if (!parsed.settings)       parsed.settings = DEFAULTS.settings;
     if (!parsed.settings.theme) parsed.settings.theme = 'dark';
-    return Object.assign({}, DEFAULTS, parsed);
+    return remapLegacyIds(Object.assign({}, DEFAULTS, parsed));
   } catch (e) { return DEFAULTS; }
 }
 
@@ -53,6 +81,16 @@ function reducer(state, action) {
       return Object.assign({}, state, {
         transactions: state.transactions.filter(function (t) { return t.id !== action.payload; }),
       });
+    // Merge a transaction that arrived via realtime (insert if new, else update in place)
+    case 'RT_UPSERT_TX': {
+      var incoming = action.payload;
+      var exists = state.transactions.some(function (t) { return t.id === incoming.id; });
+      return Object.assign({}, state, {
+        transactions: exists
+          ? state.transactions.map(function (t) { return t.id === incoming.id ? incoming : t; })
+          : [incoming].concat(state.transactions),
+      });
+    }
     case 'ADD_BOOK': {
       var book = Object.assign({ id: uuidv4(), createdAt: new Date().toISOString() }, action.payload);
       return Object.assign({}, state, { books: state.books.concat([book]), activeBookId: book.id });
@@ -69,6 +107,16 @@ function reducer(state, action) {
       var activeBookId = state.activeBookId === action.payload
         ? (books[0] ? books[0].id : null) : state.activeBookId;
       return Object.assign({}, state, { books, transactions, activeBookId });
+    }
+    // Merge a book that arrived via realtime (insert if new, else update in place)
+    case 'RT_UPSERT_BOOK': {
+      var incomingBook = action.payload;
+      var bookExists = state.books.some(function (b) { return b.id === incomingBook.id; });
+      return Object.assign({}, state, {
+        books: bookExists
+          ? state.books.map(function (b) { return b.id === incomingBook.id ? incomingBook : b; })
+          : state.books.concat([incomingBook]),
+      });
     }
     case 'DEL_TX_RANGE': {
       var p = action.payload;
@@ -164,6 +212,37 @@ export function AppProvider({ children, userId }) {
     }
 
     loadRemote().catch(function () {});
+  }, [userId]);
+
+  // ── Realtime: push changes from other devices/tabs instantly ────
+  useEffect(function () {
+    if (!userId) return;
+
+    var channel = supabase
+      .channel('sync-' + userId)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: 'user_id=eq.' + userId },
+        function (payload) {
+          if (payload.eventType === 'DELETE') {
+            dispatch({ type: 'DEL_TX', payload: payload.old.id });
+          } else {
+            dispatch({ type: 'RT_UPSERT_TX', payload: dbTxToLocal(payload.new) });
+          }
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'books', filter: 'user_id=eq.' + userId },
+        function (payload) {
+          if (payload.eventType === 'DELETE') {
+            dispatch({ type: 'DEL_BOOK', payload: payload.old.id });
+          } else {
+            dispatch({ type: 'RT_UPSERT_BOOK', payload: dbBookToLocal(payload.new) });
+          }
+        }
+      )
+      .subscribe();
+
+    return function () { supabase.removeChannel(channel); };
   }, [userId]);
 
   // ── Mutations ────────────────────────────────────────────────

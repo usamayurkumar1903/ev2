@@ -33,14 +33,33 @@ export default function Books() {
     setConfirmBook(null);
   }
 
+  var totalBalance = books.reduce(function(sum, b) { return sum + getStats(b.id).balance; }, 0);
+
   return (
     <div className="page">
       <div className="page-header">
         <span className="page-title">Books</span>
-        <button className="btn btn-primary btn-sm" onClick={function() { setEditBook(null); setModalOpen(true); }}>
-          <Plus size={15} /> New
+        <button className="bk-new-btn" onClick={function() { setEditBook(null); setModalOpen(true); }} type="button">
+          <Plus size={16} strokeWidth={2.5} />
         </button>
       </div>
+
+      {/* Summary strip */}
+      {books.length > 0 && (
+        <div className="bk-summary">
+          <div className="bk-summary-item">
+            <div className="bk-summary-label">Total Books</div>
+            <div className="bk-summary-val">{books.length}</div>
+          </div>
+          <div className="bk-summary-sep" />
+          <div className="bk-summary-item">
+            <div className="bk-summary-label">Combined Balance</div>
+            <div className="bk-summary-val" style={{ color: totalBalance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+              {totalBalance >= 0 ? '+' : '−'}{fmt(Math.abs(totalBalance), cur)}
+            </div>
+          </div>
+        </div>
+      )}
 
       {books.length === 0 ? (
         <div className="empty">
@@ -49,48 +68,59 @@ export default function Books() {
           <div className="empty-desc">Create books to organize finances by account.</div>
         </div>
       ) : (
-        books.map(function(book) {
-          const stats = getStats(book.id);
-          const isActive = book.id === activeBookId;
-          const BookIcon = (book.iconId && BOOK_ICON_MAP[book.iconId]) ? BOOK_ICON_MAP[book.iconId] : User;
-          return (
-            <div key={book.id} className={'book-card' + (isActive ? ' active' : '')}
-              style={{ borderColor: isActive ? book.color : undefined }}
-              onClick={function() { setBook(book.id); }}>
-              <div className="book-icon" style={{ background: book.color + '22' }}>
-                <BookIcon size={19} strokeWidth={1.8} style={{ color: book.color }} />
-              </div>
-              <div className="book-info">
-                <div className="book-name">
-                  {book.name}
-                  {isActive && (
-                    <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: book.color, background: book.color + '18', borderRadius: 99, padding: '1px 7px', verticalAlign: 'middle' }}>
-                      Active
-                    </span>
-                  )}
+        <div className="bk-list">
+          {books.map(function(book) {
+            const stats = getStats(book.id);
+            const isActive = book.id === activeBookId;
+            const BookIcon = (book.iconId && BOOK_ICON_MAP[book.iconId]) ? BOOK_ICON_MAP[book.iconId] : User;
+            return (
+              <div
+                key={book.id}
+                className={'bk-row' + (isActive ? ' active' : '')}
+                style={isActive ? { '--bk-color': book.color } : undefined}
+                onClick={function() { setBook(book.id); }}
+              >
+                <div className="bk-row-top">
+                  <div className="bk-row-icon" style={{ background: book.color + '20', color: book.color }}>
+                    <BookIcon size={22} strokeWidth={1.8} />
+                  </div>
+                  <div className="bk-row-actions" onClick={function(e) { e.stopPropagation(); }}>
+                    <button className="bk-row-action-btn" onClick={function() { setEditBook(book); setModalOpen(true); }} type="button">
+                      <Pencil size={15} />
+                    </button>
+                    <button className="bk-row-action-btn danger" onClick={function() { handleDelete(book); }} type="button">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
-                <div className="book-meta">{stats.count} transaction{stats.count !== 1 ? 's' : ''}</div>
-                <div style={{ marginTop: 3, fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: stats.balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                  {stats.balance >= 0 ? '+' : '−'}{fmt(Math.abs(stats.balance), cur)}
+
+                <div className="bk-row-body">
+                  <div className="bk-row-nametop">
+                    <span className="bk-row-name">{book.name}</span>
+                    {isActive && <span className="bk-row-badge">ACTIVE</span>}
+                  </div>
+                  <div className="bk-row-count">{stats.count} transaction{stats.count !== 1 ? 's' : ''}</div>
+                  <div className="bk-row-balance" style={{ color: stats.balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                    {stats.balance >= 0 ? '+' : '−'}{fmt(Math.abs(stats.balance), cur)}
+                  </div>
                 </div>
               </div>
-              <div className="book-actions" onClick={function(e) { e.stopPropagation(); }}>
-                <button className="btn-icon" onClick={function() { setEditBook(book); setModalOpen(true); }}>
-                  <Pencil size={14} />
-                </button>
-                <button className="btn-icon" onClick={function() { handleDelete(book); }} style={{ color: '#FF453A' }}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          );
-        })
+            );
+          })}
+
+          {/* Add-new row */}
+          <button className="bk-row bk-row-add" onClick={function() { setEditBook(null); setModalOpen(true); }} type="button">
+            <div className="bk-tile-add-icon"><Plus size={20} strokeWidth={2} /></div>
+            <span>New Book</span>
+          </button>
+        </div>
       )}
 
-      <div style={{ marginTop: 20, background: 'rgba(10,132,255,0.08)', border: '1px solid rgba(10,132,255,0.2)', borderRadius: 12, padding: '13px 14px' }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#0A84FF', marginBottom: 4 }}>Tip</div>
-        <div style={{ fontSize: 13, color: '#A1A1AA', lineHeight: 1.5 }}>
-          Tap a book to make it active. Create separate books for Personal, Business, or Savings to keep your finances organized.
+      <div className="bk-tip">
+        <div className="bk-tip-icon"><BookOpen size={14} /></div>
+        <div>
+          <div className="bk-tip-title">Tip</div>
+          <div className="bk-tip-text">Tap a book to make it active. Create separate books for Personal, Business, or Savings to keep your finances organized.</div>
         </div>
       </div>
 

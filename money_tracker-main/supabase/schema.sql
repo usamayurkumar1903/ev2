@@ -77,6 +77,13 @@ create index if not exists transactions_user_idx  on public.transactions(user_id
 create index if not exists transactions_book_idx  on public.transactions(book_id);
 create index if not exists transactions_date_idx  on public.transactions(date desc);
 
+-- ── Realtime ─────────────────────────────────────────────────
+-- Required for instant cross-device sync (the client subscribes to
+-- postgres_changes on these two tables). Must be run once — Realtime
+-- does not turn on by default for new tables.
+alter publication supabase_realtime add table public.books;
+alter publication supabase_realtime add table public.transactions;
+
 -- ── offline_queue ─────────────────────────────────────────────
 -- Stores operations that failed while offline.
 -- The client processes this queue when connectivity is restored.

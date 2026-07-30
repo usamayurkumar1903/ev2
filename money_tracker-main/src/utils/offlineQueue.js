@@ -61,6 +61,34 @@ export function removeFromQueue(entryId) {
 }
 
 /**
+ * One-time repair for queue entries created before the seed-book ids were
+ * fixed to real UUIDs. Any entry still pointing at the old 'personal' /
+ * 'business' string ids can never succeed against Supabase (invalid uuid
+ * syntax), so it just sits as permanently "pending". This remaps those ids
+ * to the new UUIDs (or drops the entry if remapping isn't possible) so the
+ * queue can actually drain instead of failing forever.
+ */
+export function repairLegacyQueueIds(idMap) {
+  var queue = load();
+  var changed = false;
+  var repaired = queue.map(function (q) {
+    var payload = q.payload || {};
+    var newPayload = payload;
+    if (payload.id && idMap[payload.id]) {
+      newPayload = Object.assign({}, newPayload, { id: idMap[payload.id] });
+      changed = true;
+    }
+    if (payload.book_id && idMap[payload.book_id]) {
+      newPayload = Object.assign({}, newPayload, { book_id: idMap[payload.book_id] });
+      changed = true;
+    }
+    return newPayload === payload ? q : Object.assign({}, q, { payload: newPayload });
+  });
+  if (changed) persist(repaired);
+  return changed;
+}
+
+/**
  * Attempt to replay all queued operations.
  * `supabase` is injected to avoid a circular import.
  * Returns { succeeded, failed }.

@@ -179,7 +179,7 @@ function localBookToDb(b, userId) {
   };
 }
 
-function dbBookToLocal(r) {
+export function dbBookToLocal(r) {
   return {
     id       : r.id,
     name     : r.name,
@@ -205,7 +205,7 @@ function localTxToDb(t, userId) {
   };
 }
 
-function dbTxToLocal(r) {
+export function dbTxToLocal(r) {
   return {
     id        : r.id,
     bookId    : r.book_id,
