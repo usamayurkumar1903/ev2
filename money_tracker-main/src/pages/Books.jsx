@@ -80,18 +80,8 @@ export default function Books() {
                 style={isActive ? { '--bk-color': book.color } : undefined}
                 onClick={function() { setBook(book.id); }}
               >
-                <div className="bk-row-top">
-                  <div className="bk-row-icon" style={{ background: book.color + '20', color: book.color }}>
-                    <BookIcon size={22} strokeWidth={1.8} />
-                  </div>
-                  <div className="bk-row-actions" onClick={function(e) { e.stopPropagation(); }}>
-                    <button className="bk-row-action-btn" onClick={function() { setEditBook(book); setModalOpen(true); }} type="button">
-                      <Pencil size={15} />
-                    </button>
-                    <button className="bk-row-action-btn danger" onClick={function() { handleDelete(book); }} type="button">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                <div className="bk-row-icon" style={{ background: book.color + '20', color: book.color }}>
+                  <BookIcon size={22} strokeWidth={1.8} />
                 </div>
 
                 <div className="bk-row-body">
@@ -103,6 +93,15 @@ export default function Books() {
                   <div className="bk-row-balance" style={{ color: stats.balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                     {stats.balance >= 0 ? '+' : '−'}{fmt(Math.abs(stats.balance), cur)}
                   </div>
+                </div>
+
+                <div className="bk-row-actions" onClick={function(e) { e.stopPropagation(); }}>
+                  <button className="bk-row-action-btn" onClick={function() { setEditBook(book); setModalOpen(true); }} type="button">
+                    <Pencil size={15} />
+                  </button>
+                  <button className="bk-row-action-btn danger" onClick={function() { handleDelete(book); }} type="button">
+                    <Trash2 size={15} />
+                  </button>
                 </div>
               </div>
             );

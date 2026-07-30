@@ -638,7 +638,7 @@ button.set2-row:active { background: var(--bg-elevated); }
 .bk-row {
   position: relative;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 14px;
   width: 100%;
   background: var(--bg-card);
@@ -653,10 +653,9 @@ button.set2-row:active { background: var(--bg-elevated); }
 .bk-row:active { transform: scale(0.98); }
 .bk-row.active { border-color: var(--bk-color, var(--accent)); box-shadow: 0 0 0 1px var(--bk-color, var(--accent)) inset; }
 
-.bk-row-top { display: flex; align-items: center; justify-content: space-between; }
 .bk-row-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-.bk-row-body { min-width: 0; }
+.bk-row-body { flex: 1; min-width: 0; }
 .bk-row-nametop { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
 .bk-row-name { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bk-row-badge {
