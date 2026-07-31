@@ -31,7 +31,7 @@ export default function TransactionItem({ tx, onClick, currency }) {
       {/* Amount */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
         <div className={'tx-amount ' + tx.type}>
-          {isExpense ? '−' : '+'}{fmtFull(tx.amount, currency)}
+          {fmtFull(tx.amount, currency)}
         </div>
         <div style={{
           fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99,

@@ -33,14 +33,13 @@ export default function Books() {
     setConfirmBook(null);
   }
 
-  var totalBalance = books.reduce(function(sum, b) { return sum + getStats(b.id).balance; }, 0);
-
   return (
     <div className="page">
       <div className="page-header">
         <span className="page-title">Books</span>
         <button className="bk-new-btn" onClick={function() { setEditBook(null); setModalOpen(true); }} type="button">
           <Plus size={16} strokeWidth={2.5} />
+          <span>New Book</span>
         </button>
       </div>
 
@@ -50,13 +49,6 @@ export default function Books() {
           <div className="bk-summary-item">
             <div className="bk-summary-label">Total Books</div>
             <div className="bk-summary-val">{books.length}</div>
-          </div>
-          <div className="bk-summary-sep" />
-          <div className="bk-summary-item">
-            <div className="bk-summary-label">Combined Balance</div>
-            <div className="bk-summary-val" style={{ color: totalBalance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-              {totalBalance >= 0 ? '+' : '−'}{fmt(Math.abs(totalBalance), cur)}
-            </div>
           </div>
         </div>
       )}
@@ -91,7 +83,7 @@ export default function Books() {
                   </div>
                   <div className="bk-row-count">{stats.count} transaction{stats.count !== 1 ? 's' : ''}</div>
                   <div className="bk-row-balance" style={{ color: stats.balance >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                    {stats.balance >= 0 ? '+' : '−'}{fmt(Math.abs(stats.balance), cur)}
+                    {fmt(Math.abs(stats.balance), cur)}
                   </div>
                 </div>
 
@@ -106,12 +98,6 @@ export default function Books() {
               </div>
             );
           })}
-
-          {/* Add-new row */}
-          <button className="bk-row bk-row-add" onClick={function() { setEditBook(null); setModalOpen(true); }} type="button">
-            <div className="bk-tile-add-icon"><Plus size={20} strokeWidth={2} /></div>
-            <span>New Book</span>
-          </button>
         </div>
       )}
 

@@ -60,7 +60,7 @@ export default function Dashboard() {
 
         <div className="dash-hero-label">Total Balance</div>
         <div className="dash-hero-amount" style={{ color: balance < 0 ? 'var(--danger)' : '#fff' }}>
-          {balance < 0 ? '−' : ''}{fmtFull(Math.abs(balance), cur)}
+          {fmtFull(Math.abs(balance), cur)}
         </div>
 
         {/* Divider */}
@@ -73,7 +73,7 @@ export default function Dashboard() {
               <TrendingUp size={10} />
             </div>
             <div className="dash-stat-label">Income</div>
-            <div className="dash-stat-val" style={{ color: 'rgba(255,255,255,0.9)' }}>+{fmt(moIncome, cur)}</div>
+            <div className="dash-stat-val" style={{ color: 'rgba(255,255,255,0.9)' }}>{fmt(moIncome, cur)}</div>
           </div>
           <div className="dash-stat-sep" />
           <div className="dash-stat">
@@ -81,7 +81,7 @@ export default function Dashboard() {
               <TrendingDown size={10} />
             </div>
             <div className="dash-stat-label">Expenses</div>
-            <div className="dash-stat-val" style={{ color: 'rgba(255,255,255,0.9)' }}>−{fmt(moExpense, cur)}</div>
+            <div className="dash-stat-val" style={{ color: 'rgba(255,255,255,0.9)' }}>{fmt(moExpense, cur)}</div>
           </div>
           <div className="dash-stat-sep" />
           <div className="dash-stat">
@@ -92,7 +92,7 @@ export default function Dashboard() {
             </div>
             <div className="dash-stat-label">Saved</div>
             <div className="dash-stat-val" style={{ color: moSavings >= 0 ? 'rgba(255,255,255,0.9)' : 'rgba(239,68,68,0.9)' }}>
-              {moSavings >= 0 ? '+' : '−'}{fmt(Math.abs(moSavings), cur)}
+              {fmt(Math.abs(moSavings), cur)}
             </div>
           </div>
         </div>
@@ -158,7 +158,7 @@ export default function Dashboard() {
               <div className="date-group-hd">
                 <span>{fmtDate(date)}</span>
                 <span className={'date-group-total ' + (dayTotal >= 0 ? 'text-success' : 'text-danger')}>
-                  {dayTotal >= 0 ? '+' : '−'}{fmt(Math.abs(dayTotal), cur)}
+                  {fmt(Math.abs(dayTotal), cur)}
                 </span>
               </div>
               <div className="tx-list">

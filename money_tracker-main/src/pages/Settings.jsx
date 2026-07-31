@@ -17,6 +17,7 @@ import { clearAllAttachments } from '../utils/db';
 import { useAuth } from '../hooks/useAuth';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { getQueue } from '../utils/offlineQueue';
+import { clearAllUserData } from '../utils/dataService';
 
 /* ─── Shared UI helpers ─────────────────────────────────────────── */
 
@@ -132,7 +133,7 @@ function buildPDF(txList, allBooks, currency, title, groupByBook) {
     '}',
   ].join('');
 
-  function amtStr(t) { return (t.type==='expense'?'−':'+')+fmtFull(t.amount,currency); }
+  function amtStr(t) { return fmtFull(t.amount,currency); }
   function amtCls(t) { return t.type==='expense'?'exp':'inc'; }
   function dotColor(t) { return t.type==='expense'?'#d93025':'#1a9e4a'; }
 
@@ -163,20 +164,20 @@ function buildPDF(txList, allBooks, currency, title, groupByBook) {
   }
 
   function sumBar(inc, exp, bal, big) {
-    var bc = bal>=0?'bal-p':'bal-n'; var bs = bal>=0?'+':'−';
+    var bc = bal>=0?'bal-p':'bal-n';
     var cell = big ? '.s-cell' : '.bs-cell';  /* same markup, different class handled by caller */
     var _ = big;
     if (big) {
       return '<div class="summary">' +
-        '<div class="s-cell"><div class="s-lbl">Income</div><div class="s-val inc">+'+fmtFull(inc,currency)+'</div></div>' +
-        '<div class="s-cell"><div class="s-lbl">Expenses</div><div class="s-val exp">−'+fmtFull(exp,currency)+'</div></div>' +
-        '<div class="s-cell"><div class="s-lbl">Balance</div><div class="s-val '+bc+'">'+bs+fmtFull(Math.abs(bal),currency)+'</div></div>' +
+        '<div class="s-cell"><div class="s-lbl">Income</div><div class="s-val inc">'+fmtFull(inc,currency)+'</div></div>' +
+        '<div class="s-cell"><div class="s-lbl">Expenses</div><div class="s-val exp">'+fmtFull(exp,currency)+'</div></div>' +
+        '<div class="s-cell"><div class="s-lbl">Balance</div><div class="s-val '+bc+'">'+fmtFull(Math.abs(bal),currency)+'</div></div>' +
       '</div>';
     } else {
       return '<div class="book-summary">' +
-        '<div class="bs-cell"><div class="bs-lbl">Income</div><div class="bs-val inc">+'+fmtFull(inc,currency)+'</div></div>' +
-        '<div class="bs-cell"><div class="bs-lbl">Expenses</div><div class="bs-val exp">−'+fmtFull(exp,currency)+'</div></div>' +
-        '<div class="bs-cell"><div class="bs-lbl">Balance</div><div class="bs-val '+bc+'">'+bs+fmtFull(Math.abs(bal),currency)+'</div></div>' +
+        '<div class="bs-cell"><div class="bs-lbl">Income</div><div class="bs-val inc">'+fmtFull(inc,currency)+'</div></div>' +
+        '<div class="bs-cell"><div class="bs-lbl">Expenses</div><div class="bs-val exp">'+fmtFull(exp,currency)+'</div></div>' +
+        '<div class="bs-cell"><div class="bs-lbl">Balance</div><div class="bs-val '+bc+'">'+fmtFull(Math.abs(bal),currency)+'</div></div>' +
       '</div>';
     }
   }
@@ -810,11 +811,21 @@ export default function Settings() {
   }, [settings.currency]);
 
   function handleClear() {
-    localStorage.removeItem('et-v2');
-    clearAllAttachments().catch(function() {});
-    toast('All data cleared', 'success');
-    setClearConfirm(false);
-    setTimeout(function() { window.location.reload(); }, 800);
+    var uid = user ? user.id : null;
+    var finish = function () {
+      localStorage.removeItem('et-v2');
+      clearAllAttachments().catch(function() {});
+      toast('All data cleared', 'success');
+      setClearConfirm(false);
+      setTimeout(function() { window.location.reload(); }, 800);
+    };
+    if (uid) {
+      // Signed in: without this, the cloud copy re-downloads everything
+      // right back on the next load, making "Clear All Data" a no-op.
+      clearAllUserData(uid).catch(function() {}).then(finish);
+    } else {
+      finish();
+    }
   }
 
   function handleLockToggle(checked) {

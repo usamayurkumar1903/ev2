@@ -97,14 +97,14 @@ export default function Transactions() {
             <div className="hist-banner-icon income"><ArrowUpRight size={14} /></div>
             <div>
               <div className="hist-banner-label">Income</div>
-              <div className="hist-banner-val income">+{fmt(totIncome, cur)}</div>
+              <div className="hist-banner-val income">{fmt(totIncome, cur)}</div>
             </div>
           </div>
           <div className="hist-banner-stat">
             <div className="hist-banner-icon expense"><ArrowDownRight size={14} /></div>
             <div>
               <div className="hist-banner-label">Expenses</div>
-              <div className="hist-banner-val expense">−{fmt(totExpense, cur)}</div>
+              <div className="hist-banner-val expense">{fmt(totExpense, cur)}</div>
             </div>
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function Transactions() {
               <div className="date-group-hd">
                 <span>{fmtDate(date)}</span>
                 <span className={'date-group-total ' + (dayTotal >= 0 ? 'text-success' : 'text-danger')}>
-                  {dayTotal >= 0 ? '+' : '−'}{fmt(Math.abs(dayTotal), cur)}
+                  {fmt(Math.abs(dayTotal), cur)}
                 </span>
               </div>
               <div className="tx-list">

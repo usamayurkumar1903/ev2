@@ -8,7 +8,7 @@
  * Shape of each item:
  * {
  *   id       : string            // random, for dedup / logging
- *   op       : 'upsert' | 'delete'
+ *   op       : 'upsert' | 'delete' | 'delete_by_book' | 'delete_by_range'
  *   table    : 'books' | 'transactions' | 'user_profiles'
  *   payload  : object            // row to upsert, or { id } for delete
  *   createdAt: ISO string
@@ -109,6 +109,23 @@ export async function flushQueue(supabase, userId) {
           .eq('id', entry.payload.id)
           .eq('user_id', userId);
         if (error) throw error;
+      } else if (entry.op === 'delete_by_book') {
+        var { error: errBook } = await supabase
+          .from(entry.table)
+          .delete()
+          .eq('user_id', userId)
+          .eq('book_id', entry.payload.book_id);
+        if (errBook) throw errBook;
+      } else if (entry.op === 'delete_by_range') {
+        var q = supabase
+          .from(entry.table)
+          .delete()
+          .eq('user_id', userId)
+          .eq('book_id', entry.payload.book_id);
+        if (entry.payload.from) q = q.gte('date', entry.payload.from);
+        if (entry.payload.to)   q = q.lte('date', entry.payload.to);
+        var { error: errRange } = await q;
+        if (errRange) throw errRange;
       } else {
         var { error: err } = await supabase
           .from(entry.table)

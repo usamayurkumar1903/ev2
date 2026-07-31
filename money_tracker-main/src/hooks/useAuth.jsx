@@ -36,7 +36,16 @@ export function AuthProvider({ children }) {
       if (user) flushQueue(supabase, user.id).catch(function () {});
     }
     window.addEventListener('online', onOnline);
-    return function () { window.removeEventListener('online', onOnline); };
+    // Safety net: retry any queued (failed/offline) writes periodically,
+    // regardless of whether the browser ever fires an 'online' event —
+    // this is what lets a stuck "pending" sync actually clear on its own.
+    var interval = setInterval(function () {
+      if (user) flushQueue(supabase, user.id).catch(function () {});
+    }, 15000);
+    return function () {
+      window.removeEventListener('online', onOnline);
+      clearInterval(interval);
+    };
   }, [user]);
 
   var signInWithGoogle = useCallback(async function () {

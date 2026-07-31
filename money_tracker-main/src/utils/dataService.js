@@ -116,8 +116,9 @@ export async function deleteTransactionsByBook(userId, bookId) {
       .eq('book_id', bookId);
     if (error) throw error;
   } catch (e) {
-    // When offline, individual deletes will already have been queued
-    // by the DEL_TX_RANGE / DEL_BOOK action in AppContext.
+    // Retry later — this bulk delete must actually reach Supabase, or the
+    // transactions reappear on other devices next time they hydrate.
+    enqueue({ op: 'delete_by_book', table: 'transactions', payload: { book_id: bookId, user_id: userId } });
   }
 }
 
@@ -133,8 +134,18 @@ export async function deleteTransactionsByRange(userId, bookId, from, to) {
     var { error } = await q;
     if (error) throw error;
   } catch (e) {
-    // No-op — individual transactions were already queued in AppContext
+    enqueue({ op: 'delete_by_range', table: 'transactions', payload: { book_id: bookId, user_id: userId, from: from || null, to: to || null } });
   }
+}
+
+/**
+ * Wipe every book/transaction this user owns — used by "Clear All Data".
+ * Deleting books cascades transactions server-side, but both are deleted
+ * explicitly here in case cascade is ever changed.
+ */
+export async function clearAllUserData(userId) {
+  await supabase.from('transactions').delete().eq('user_id', userId);
+  await supabase.from('books').delete().eq('user_id', userId);
 }
 
 /* ── Bulk migration  ─────────────────────────────────────────── */

@@ -80,7 +80,7 @@ export default function TransactionDetail({ tx, onClose, onEdit }) {
               className="td-amount"
               style={{ color: tx.type === 'expense' ? 'var(--danger)' : 'var(--success)' }}
             >
-              {tx.type === 'expense' ? '−' : '+'}{fmtFull(tx.amount, settings.currency)}
+              {fmtFull(tx.amount, settings.currency)}
             </div>
             <div className="td-cat-label">{cat.label}</div>
           </div>
