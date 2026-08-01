@@ -28,7 +28,7 @@ function hasLocalData() {
   try {
     var d = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}');
     return (d.transactions && d.transactions.length > 0) ||
-           (d.books && d.books.length > 2); // more than the 2 defaults
+           (d.books && d.books.length > 0); // no default books anymore — any book is real user data
   } catch (e) { return false; }
 }
 

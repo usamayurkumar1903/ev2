@@ -25,22 +25,46 @@ function isOfflineError(err) {
 
 async function attempt(table, op, payload, userId) {
   try {
-    if (op === 'delete') {
-      var { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', payload.id)
-        .eq('user_id', userId);
-      if (error) throw error;
-    } else {
-      var { error: err } = await supabase
-        .from(table)
-        .upsert(Object.assign({}, payload, { user_id: userId }), { onConflict: 'id' });
-      if (err) throw err;
-    }
+    await runOnce(table, op, payload, userId);
   } catch (e) {
-    // Queue for later whether offline or a transient error
+    // A transaction can be added within milliseconds of its book being
+    // created — if the book's own upsert hasn't finished landing on
+    // Supabase yet, the transaction insert fails with a foreign-key
+    // violation (book_id not found yet), even though it's not a real
+    // problem — the book is on its way. Retry once, shortly, before
+    // falling back to the slow offline queue.
+    if (isForeignKeyError(e)) {
+      await new Promise(function (r) { setTimeout(r, 1200); });
+      try {
+        await runOnce(table, op, payload, userId);
+        return;
+      } catch (e2) {
+        enqueue({ op, table, payload: Object.assign({}, payload, { user_id: userId }) });
+        return;
+      }
+    }
+    // Queue for later whether offline or another transient error
     enqueue({ op, table, payload: Object.assign({}, payload, { user_id: userId }) });
+  }
+}
+
+function isForeignKeyError(e) {
+  return !!e && (e.code === '23503' || /foreign key/i.test(e.message || ''));
+}
+
+async function runOnce(table, op, payload, userId) {
+  if (op === 'delete') {
+    var { error } = await supabase
+      .from(table)
+      .delete()
+      .eq('id', payload.id)
+      .eq('user_id', userId);
+    if (error) throw error;
+  } else {
+    var { error: err } = await supabase
+      .from(table)
+      .upsert(Object.assign({}, payload, { user_id: userId }), { onConflict: 'id' });
+    if (err) throw err;
   }
 }
 

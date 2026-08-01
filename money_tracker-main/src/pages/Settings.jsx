@@ -526,10 +526,11 @@ function ExportWizard({ open, onClose, books, transactions, currency }) {
 }
 
 /* ─── Clear Selected Book Wizard ────────────────────────────────── */
-/* Pick a single book → confirm → delBook() removes the book, its
- * transactions, and (via AppContext) their IndexedDB attachments. */
+/* Pick a book → confirm → clears every transaction (and receipts) in
+ * that book via delTxRange(bookId, null, null). The book itself is
+ * kept — this only empties its transaction history. */
 
-function ClearBookWizard({ open, onClose, books, transactions, delBook }) {
+function ClearBookWizard({ open, onClose, books, transactions, delTxRange }) {
   var toast = useToast().toast;
   var selS = useState('');     var selBookId  = selS[0];  var setSelBookId  = selS[1];
   var confS = useState(false); var confirmOpen = confS[0]; var setConfirmOpen = confS[1];
@@ -543,15 +544,14 @@ function ClearBookWizard({ open, onClose, books, transactions, delBook }) {
   var selBook  = books.find(function(b) { return b.id === selBookId; });
   var selCount = selBook ? transactions.filter(function(t) { return t.bookId === selBook.id; }).length : 0;
 
-  function handleDeleteClick() {
+  function handleClearClick() {
     if (!selBook) { toast('Select a book first', 'error'); return; }
-    if (books.length <= 1) { toast("Can't delete the only book", 'error'); return; }
     setConfirmOpen(true);
   }
 
   function handleConfirm() {
-    delBook(selBook.id);
-    toast('"' + selBook.name + '" deleted', 'success');
+    delTxRange(selBook.id, null, null);
+    toast('"' + selBook.name + '" cleared', 'success');
     setConfirmOpen(false);
     onClose();
   }
@@ -575,7 +575,7 @@ function ClearBookWizard({ open, onClose, books, transactions, delBook }) {
 
           <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <span style={labelStyle}>Select Book to Delete</span>
+              <span style={labelStyle}>Select Book to Clear</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {books.map(function(b) {
                   var bTxCount = transactions.filter(function(t) { return t.bookId === b.id; }).length;
@@ -606,9 +606,9 @@ function ClearBookWizard({ open, onClose, books, transactions, delBook }) {
             <button
               className="btn btn-danger btn-full"
               style={{ height: 46, fontSize: 14 }}
-              onClick={handleDeleteClick}
+              onClick={handleClearClick}
             >
-              <Trash2 size={15} /> Delete Book
+              <Trash2 size={15} /> Clear Transactions
             </button>
           </div>
         </div>
@@ -616,9 +616,9 @@ function ClearBookWizard({ open, onClose, books, transactions, delBook }) {
 
       <ConfirmDialog
         open={confirmOpen}
-        title={selBook ? 'Delete "' + selBook.name + '"?' : 'Delete Book?'}
-        description={'This will permanently delete this book and its ' + selCount + ' transaction' + (selCount !== 1 ? 's' : '') + ', along with any attached receipts. Other books are not affected. This cannot be undone.'}
-        confirmLabel="Delete Book"
+        title={selBook ? 'Clear "' + selBook.name + '"?' : 'Clear Book?'}
+        description={'This will permanently delete all ' + selCount + ' transaction' + (selCount !== 1 ? 's' : '') + ' in this book, along with any attached receipts. The book itself, and other books, are not affected. This cannot be undone.'}
+        confirmLabel="Clear Transactions"
         onConfirm={handleConfirm}
         onCancel={function() { setConfirmOpen(false); }}
       />
@@ -1000,7 +1000,7 @@ export default function Settings() {
           icon={<BookOpen size={16} />}
           iconBg="var(--danger-dim)" iconColor="var(--danger)"
           label="Clear Selected Book"
-          sub="Delete one book, its transactions & receipts"
+          sub="Delete a book's transactions & receipts"
           onClick={function() { setClearBookOpen(true); }}
           danger
         />
@@ -1065,7 +1065,7 @@ export default function Settings() {
         onClose={function() { setClearBookOpen(false); }}
         books={books}
         transactions={transactions}
-        delBook={delBook}
+        delTxRange={delTxRange}
       />
 
       <ClearRangeWizard

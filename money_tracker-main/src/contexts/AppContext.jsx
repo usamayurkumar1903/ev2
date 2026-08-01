@@ -22,12 +22,9 @@ var PERSONAL_BOOK_ID = 'a1a10000-0000-4000-8000-000000000001';
 var BUSINESS_BOOK_ID = 'b2b20000-0000-4000-8000-000000000002';
 
 var DEFAULTS = {
-  books: [
-    { id: PERSONAL_BOOK_ID, name: 'Personal', color: '#0A84FF', iconId: 'user',      createdAt: new Date().toISOString() },
-    { id: BUSINESS_BOOK_ID, name: 'Business', color: '#30D158', iconId: 'briefcase', createdAt: new Date().toISOString() },
-  ],
+  books: [],
   transactions: [],
-  activeBookId: PERSONAL_BOOK_ID,
+  activeBookId: null,
   settings: { currency: '₹', theme: 'dark' },
 };
 
@@ -149,6 +146,7 @@ export function AppProvider({ children, userId }) {
   var stateRef    = useRef(state);
   var userIdRef   = useRef(userId);
   var prevUserRef = useRef(null);   // track previous userId to detect user switch
+  var migratedForRef = useRef(null); // userId for which first-login migration already ran
 
   useEffect(function () { stateRef.current  = state;  }, [state]);
   useEffect(function () { userIdRef.current = userId; }, [userId]);
@@ -185,7 +183,8 @@ export function AppProvider({ children, userId }) {
       // Supabase is empty — upload local data up to the cloud
       if (remoteBooks.length === 0) {
         var local = stateRef.current;
-        if (local.books.length > 0 || local.transactions.length > 0) {
+        if ((local.books.length > 0 || local.transactions.length > 0) && migratedForRef.current !== userId) {
+          migratedForRef.current = userId;
           migrateLocalData(userId, local.books, local.transactions).catch(function () {});
         }
         if (profile) {

@@ -23,7 +23,6 @@ export default function Books() {
   }
 
   function handleDelete(book) {
-    if (books.length <= 1) { toast("Can't delete the only book", 'error'); return; }
     setConfirmBook(book);
   }
 

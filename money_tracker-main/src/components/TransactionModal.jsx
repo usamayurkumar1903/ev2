@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Camera, Image as ImageIcon } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, BookOpen, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useApp } from '../contexts/AppContext';
 import { useToast } from '../hooks/useToast';
@@ -8,14 +8,20 @@ import { ICONS } from './CategoryIcon';
 import { MoreHorizontal } from 'lucide-react';
 import { saveAttachment, getAttachment, deleteAttachment } from '../utils/db';
 import Portal from './Portal';
+import BookModal from './BookModal';
+import ConfirmDialog from './ConfirmDialog';
+import { fmtFull } from '../utils/constants';
 
 var ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function TransactionModal({ open, onClose, editTx, defaultType }) {
   var app = useApp();
   var addTx = app.addTx; var updTx = app.updTx;
-  var activeBookId = app.activeBookId; var settings = app.settings;
+  var activeBookId = app.activeBookId; var settings = app.settings; var books = app.books;
   var toast = useToast().toast;
+
+  var needBookModalS = useState(false); var needBookModal = needBookModalS[0]; var setNeedBookModal = needBookModalS[1];
+  var lowBalConfirmS = useState(false); var lowBalConfirmOpen = lowBalConfirmS[0]; var setLowBalConfirmOpen = lowBalConfirmS[1];
 
   var typeS   = useState('income');  var type   = typeS[0]; var setType   = typeS[1];
   var amtS    = useState('');        var amount = amtS[0];  var setAmount = amtS[1];
@@ -73,6 +79,38 @@ export default function TransactionModal({ open, onClose, editTx, defaultType })
 
   if (!open) return null;
 
+  // No book to attach this transaction to yet — prompt to create one first
+  // instead of silently failing (or worse, saving with no book at all).
+  if (!editTx && books.length === 0) {
+    return (
+      <Portal>
+        <div className="bm-overlay" onClick={function(e) { if (e.target === e.currentTarget) onClose(); }}>
+          <div className="bm-sheet" style={{ padding: '28px 20px' }}>
+            <div className="bm-handle" />
+            <div className="empty" style={{ padding: '8px 0 4px' }}>
+              <div className="empty-icon"><BookOpen size={22} /></div>
+              <div className="empty-title">Create a book first</div>
+              <div className="empty-desc">You need at least one book before adding a transaction.</div>
+            </div>
+            <button
+              className="btn btn-primary btn-full"
+              style={{ height: 50, fontSize: 15, marginTop: 8 }}
+              onClick={function() { setNeedBookModal(true); }}
+              type="button"
+            >
+              Create Book
+            </button>
+          </div>
+        </div>
+        <BookModal
+          open={needBookModal}
+          onClose={function() { setNeedBookModal(false); onClose(); }}
+          editBook={null}
+        />
+      </Portal>
+    );
+  }
+
   var cats = (type === 'expense' ? EXPENSE_CATS : INCOME_CATS)
     .map(function(id) { return getCat(id); });
 
@@ -107,9 +145,14 @@ export default function TransactionModal({ open, onClose, editTx, defaultType })
     }
   }
 
-  function handleSubmit() {
+  var bookBalance = app.transactions
+    .filter(function(t) { return t.bookId === activeBookId && (!editTx || t.id !== editTx.id); })
+    .reduce(function(sum, t) { return t.type === 'income' ? sum + t.amount : sum - t.amount; }, 0);
+  var amountNum = parseFloat(amount) || 0;
+  var insufficientBalance = type === 'expense' && amountNum > 0 && amountNum > bookBalance;
+
+  function doSave() {
     var n = parseFloat(amount);
-    if (!amount || isNaN(n) || n <= 0) { toast('Enter a valid amount', 'error'); return; }
     var willHaveAttachment = attachFile ? true : (hasExisting && !removeExisting);
     var data = { type: type, amount: n, category: category, date: date, notes: notes.trim(), bookId: activeBookId, attachment: willHaveAttachment };
     if (editTx) {
@@ -123,6 +166,13 @@ export default function TransactionModal({ open, onClose, editTx, defaultType })
       toast('Transaction added', 'success');
     }
     onClose();
+  }
+
+  function handleSubmit() {
+    var n = parseFloat(amount);
+    if (!amount || isNaN(n) || n <= 0) { toast('Enter a valid amount', 'error'); return; }
+    if (insufficientBalance) { setLowBalConfirmOpen(true); return; }
+    doSave();
   }
 
   /*
@@ -183,6 +233,14 @@ export default function TransactionModal({ open, onClose, editTx, defaultType })
               enterKeyHint="next"
               autoFocus={!editTx}
             />
+            {insufficientBalance && (
+              <div className="br-notice br-notice-yellow" style={{ marginTop: 10 }}>
+                <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>
+                  This exceeds your available balance of <strong>{fmtFull(bookBalance, settings.currency)}</strong> in this book.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* ── Category ── */}
@@ -298,6 +356,15 @@ export default function TransactionModal({ open, onClose, editTx, defaultType })
         </div>{/* end .bm-scroll */}
       </div>{/* end .bm-sheet */}
     </div>
+
+    <ConfirmDialog
+      open={lowBalConfirmOpen}
+      title="Insufficient Balance"
+      description={'This expense of ' + fmtFull(amountNum, settings.currency) + ' exceeds this book\'s available balance of ' + fmtFull(bookBalance, settings.currency) + '. Add it anyway?'}
+      confirmLabel="Add Anyway"
+      onConfirm={function() { setLowBalConfirmOpen(false); doSave(); }}
+      onCancel={function() { setLowBalConfirmOpen(false); }}
+    />
     </Portal>
   );
 }
